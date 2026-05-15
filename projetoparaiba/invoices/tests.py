@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -623,12 +624,14 @@ class InvoiceRegistrationStageTwoTests(TestCase):
         payload = response.json()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(payload["message"], "Registro lançado com sucesso.")
+        self.assertEqual(payload["message"], "Dados criados no banco com sucesso.")
         self.assertEqual(payload["analysis"]["fornecedor"]["acao"], "criado")
         self.assertEqual(payload["analysis"]["faturado"]["acao"], "criado")
         self.assertEqual(payload["analysis"]["despesa"]["acao"], "criado")
         self.assertEqual(payload["analysis"]["movimento"]["tipo"], "APAGAR")
+        self.assertFalse(payload["analysis"]["movimento"]["duplicado"])
         self.assertTrue(payload["analysis"]["parcelas"])
+        self.assertFalse(payload["analysis"]["historico_fornecedor"]["possui_dados"])
         self.assertEqual(Pessoa.objects.filter(tipo=Pessoa.Tipo.CLIENTE_FORNECEDOR).count(), 1)
         self.assertEqual(Pessoa.objects.filter(tipo=Pessoa.Tipo.FATURADO).count(), 1)
         self.assertEqual(Classificacao.objects.filter(tipo=Classificacao.Tipo.DESPESA).count(), 1)
@@ -666,3 +669,289 @@ class InvoiceRegistrationStageTwoTests(TestCase):
         self.assertEqual(Pessoa.objects.filter(tipo=Pessoa.Tipo.CLIENTE_FORNECEDOR).count(), 1)
         self.assertEqual(Pessoa.objects.filter(tipo=Pessoa.Tipo.FATURADO).count(), 1)
         self.assertEqual(Classificacao.objects.filter(tipo=Classificacao.Tipo.DESPESA).count(), 1)
+
+    @patch(
+        "invoices.services.PdfExtractionAgent.extract",
+        side_effect=[
+            ExtractionResult(
+                data={
+                    "fornecedor": {
+                        "razao_social": "FORNECEDORA TESTE",
+                        "fantasia": "FORNECEDORA TESTE",
+                        "cnpj": "11.111.111/0001-11",
+                    },
+                    "faturado": {"nome_completo": "CLIENTE TESTE", "cpf": "222.222.222-22"},
+                    "numero_nota_fiscal": "1001",
+                    "serie": "1",
+                    "data_emissao": "2024-01-01",
+                    "produtos": [{"descricao": "Oleo Diesel S10", "quantidade": 1}],
+                    "parcelas": [{"numero": 1, "data_vencimento": "2024-02-01", "valor": 100.0}],
+                    "valor_total": 100.0,
+                    "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+                },
+                provider="mock",
+            ),
+            ExtractionResult(
+                data={
+                    "fornecedor": {
+                        "razao_social": "FORNECEDORA TESTE",
+                        "fantasia": "FORNECEDORA TESTE",
+                        "cnpj": "11.111.111/0001-11",
+                    },
+                    "faturado": {"nome_completo": "CLIENTE TESTE", "cpf": "222.222.222-22"},
+                    "numero_nota_fiscal": "1001",
+                    "serie": "1",
+                    "data_emissao": "2024-01-01",
+                    "produtos": [{"descricao": "Oleo Diesel S10", "quantidade": 1}],
+                    "parcelas": [{"numero": 1, "data_vencimento": "2024-02-01", "valor": 100.0}],
+                    "valor_total": 100.0,
+                    "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+                },
+                provider="mock",
+            ),
+        ],
+    )
+    def test_duplicate_invoice_is_not_created_twice(self, _mock_extract) -> None:
+        service = InvoiceExtractionService()
+        file_one = SimpleUploadedFile("nota_1.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+        file_two = SimpleUploadedFile("nota_2.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+
+        first_payload = service.extract(file_one)
+        second_payload = service.extract(file_two)
+
+        self.assertEqual(first_payload["message"], "Dados criados no banco com sucesso.")
+        self.assertEqual(second_payload["message"], "Upload dessa nota ja foi realizado anteriormente.")
+        self.assertTrue(second_payload["analysis"]["movimento"]["duplicado"])
+        self.assertEqual(MovimentoContas.objects.count(), 1)
+        self.assertEqual(ParcelaContas.objects.count(), 1)
+        self.assertEqual(second_payload["analysis"]["historico_fornecedor"]["quantidade"], 1)
+
+    @patch(
+        "invoices.services.PdfExtractionAgent.extract",
+        side_effect=[
+            ExtractionResult(
+                data={
+                    "fornecedor": {
+                        "razao_social": "FORNECEDORA HISTORICO",
+                        "fantasia": "FORNECEDORA HISTORICO",
+                        "cnpj": "33.333.333/0001-33",
+                    },
+                    "faturado": {"nome_completo": "CLIENTE HISTORICO", "cpf": "444.444.444-44"},
+                    "numero_nota_fiscal": "2001",
+                    "serie": "1",
+                    "data_emissao": "2024-03-01",
+                    "produtos": [{"descricao": "Oleo Diesel S10", "quantidade": 1}],
+                    "parcelas": [{"numero": 1, "data_vencimento": "2024-04-01", "valor": 150.0}],
+                    "valor_total": 150.0,
+                    "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+                },
+                provider="mock",
+            ),
+            ExtractionResult(
+                data={
+                    "fornecedor": {
+                        "razao_social": "FORNECEDORA HISTORICO",
+                        "fantasia": "FORNECEDORA HISTORICO",
+                        "cnpj": "33.333.333/0001-33",
+                    },
+                    "faturado": {"nome_completo": "CLIENTE HISTORICO", "cpf": "444.444.444-44"},
+                    "numero_nota_fiscal": "2002",
+                    "serie": "1",
+                    "data_emissao": "2024-03-15",
+                    "produtos": [{"descricao": "Peca de manutencao", "quantidade": 2}],
+                    "parcelas": [{"numero": 1, "data_vencimento": "2024-04-15", "valor": 275.0}],
+                    "valor_total": 275.0,
+                    "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+                },
+                provider="mock",
+            ),
+        ],
+    )
+    def test_second_invoice_from_same_supplier_returns_previous_history(self, _mock_extract) -> None:
+        service = InvoiceExtractionService()
+        file_one = SimpleUploadedFile("nota_hist_1.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+        file_two = SimpleUploadedFile("nota_hist_2.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+
+        service.extract(file_one)
+        second_payload = service.extract(file_two)
+
+        self.assertEqual(second_payload["message"], "Dados criados no banco com sucesso.")
+        self.assertFalse(second_payload["analysis"]["movimento"]["duplicado"])
+        self.assertEqual(second_payload["analysis"]["historico_fornecedor"]["quantidade"], 1)
+        history_item = second_payload["analysis"]["historico_fornecedor"]["itens"][0]
+        self.assertEqual(history_item["numero_nota_fiscal"], "2001")
+        self.assertEqual(history_item["dados_extraidos"]["numero_nota_fiscal"], "2001")
+
+    @patch(
+        "invoices.services.PdfExtractionAgent.extract",
+        return_value=ExtractionResult(
+            data={
+                "fornecedor": {
+                    "razao_social": "FORNECEDOR INATIVO",
+                    "fantasia": "FORNECEDOR INATIVO",
+                    "cnpj": "55.555.555/0001-55",
+                },
+                "faturado": {"nome_completo": "FATURADO INATIVO", "cpf": "555.555.555-55"},
+                "numero_nota_fiscal": "3001",
+                "serie": "1",
+                "data_emissao": "2024-05-01",
+                "produtos": [{"descricao": "Produto A", "quantidade": 1}],
+                "parcelas": [{"numero": 1, "data_vencimento": "2024-06-01", "valor": 90.0}],
+                "valor_total": 90.0,
+                "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+            },
+            provider="mock",
+        ),
+    )
+    def test_inactive_records_are_reactivated_instead_of_duplicated(self, _mock_extract) -> None:
+        fornecedor = Pessoa.all_objects.create(
+            tipo=Pessoa.Tipo.CLIENTE_FORNECEDOR,
+            razao_social="FORNECEDOR INATIVO",
+            documento="55555555000155",
+            ativo=False,
+        )
+        faturado = Pessoa.all_objects.create(
+            tipo=Pessoa.Tipo.FATURADO,
+            razao_social="FATURADO INATIVO",
+            documento="55555555555",
+            ativo=False,
+        )
+        despesa = Classificacao.all_objects.create(
+            tipo=Classificacao.Tipo.DESPESA,
+            descricao="MANUTENCAO E OPERACAO",
+            ativo=False,
+        )
+
+        service = InvoiceExtractionService()
+        file = SimpleUploadedFile("nota_inativa.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+        payload = service.extract(file)
+
+        fornecedor.refresh_from_db()
+        faturado.refresh_from_db()
+        despesa.refresh_from_db()
+
+        self.assertTrue(fornecedor.ativo)
+        self.assertTrue(faturado.ativo)
+        self.assertTrue(despesa.ativo)
+        self.assertEqual(payload["analysis"]["fornecedor"]["id"], fornecedor.id)
+        self.assertEqual(payload["analysis"]["faturado"]["id"], faturado.id)
+        self.assertEqual(payload["analysis"]["despesa"]["id"], despesa.id)
+
+    @patch(
+        "invoices.services.PdfExtractionAgent.extract",
+        return_value=ExtractionResult(
+            data={
+                "fornecedor": {
+                    "razao_social": "FORNECEDOR MULTI",
+                    "fantasia": "FORNECEDOR MULTI",
+                    "cnpj": "66.666.666/0001-66",
+                },
+                "faturado": {"nome_completo": "FATURADO MULTI", "cpf": "666.666.666-66"},
+                "numero_nota_fiscal": "4001",
+                "serie": "1",
+                "data_emissao": "2024-05-10",
+                "produtos": [{"descricao": "Produto B", "quantidade": 1}],
+                "parcelas": [{"numero": 1, "data_vencimento": "2024-06-10", "valor": 250.0}],
+                "valor_total": 250.0,
+                "classificacoes_despesa": [
+                    {"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"},
+                    {"categoria": "ADMINISTRATIVAS", "justificativa": "Teste"},
+                ],
+            },
+            provider="mock",
+        ),
+    )
+    def test_accounts_payable_can_link_multiple_expense_types(self, _mock_extract) -> None:
+        service = InvoiceExtractionService()
+        file = SimpleUploadedFile("nota_multi.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+        payload = service.extract(file)
+
+        movimento = MovimentoContas.objects.get(id=payload["analysis"]["movimento"]["id"])
+        self.assertEqual(movimento.classificacoes.count(), 2)
+        self.assertEqual(
+            set(movimento.classificacoes.values_list("descricao", flat=True)),
+            {"MANUTENCAO E OPERACAO", "ADMINISTRATIVAS"},
+        )
+
+
+class ActivableModelTests(TestCase):
+    def test_soft_delete_inactivates_person_instead_of_removing_row(self) -> None:
+        pessoa = Pessoa.objects.create(
+            tipo=Pessoa.Tipo.CLIENTE,
+            razao_social="CLIENTE SOFT DELETE",
+            documento="12345678901",
+        )
+
+        pessoa.delete()
+
+        self.assertFalse(Pessoa.all_objects.get(id=pessoa.id).ativo)
+        self.assertFalse(Pessoa.objects.filter(id=pessoa.id).exists())
+
+    def test_queryset_delete_inactivates_classification(self) -> None:
+        classificacao = Classificacao.objects.create(
+            tipo=Classificacao.Tipo.RECEITA,
+            descricao="RECEITA TESTE",
+        )
+
+        Classificacao.objects.filter(id=classificacao.id).delete()
+
+        self.assertFalse(Classificacao.all_objects.get(id=classificacao.id).ativo)
+
+    def test_active_person_duplicate_is_blocked(self) -> None:
+        Pessoa.objects.create(
+            tipo=Pessoa.Tipo.CLIENTE_FORNECEDOR,
+            razao_social="PESSOA DUPLICADA",
+            documento="10101010101",
+        )
+
+        with self.assertRaises(ValidationError):
+            Pessoa.objects.create(
+                tipo=Pessoa.Tipo.FORNECEDOR,
+                razao_social="PESSOA DUPLICADA",
+                documento="10101010101",
+            )
+
+    def test_active_classification_duplicate_is_blocked(self) -> None:
+        Classificacao.objects.create(
+            tipo=Classificacao.Tipo.DESPESA,
+            descricao="DESPESA DUPLICADA",
+        )
+
+        with self.assertRaises(ValidationError):
+            Classificacao.objects.create(
+                tipo=Classificacao.Tipo.DESPESA,
+                descricao="despesa duplicada",
+            )
+
+
+class ParcelValidationTests(TestCase):
+    @patch(
+        "invoices.services.PdfExtractionAgent.extract",
+        return_value=ExtractionResult(
+            data={
+                "fornecedor": {
+                    "razao_social": "FORNECEDOR PARCELA",
+                    "fantasia": "FORNECEDOR PARCELA",
+                    "cnpj": "77.777.777/0001-77",
+                },
+                "faturado": {"nome_completo": "FATURADO PARCELA", "cpf": "777.777.777-77"},
+                "numero_nota_fiscal": "5001",
+                "serie": "1",
+                "data_emissao": "2024-07-01",
+                "produtos": [{"descricao": "Produto C", "quantidade": 1}],
+                "parcelas": [
+                    {"numero": 1, "data_vencimento": "2024-08-10", "valor": 100.0},
+                    {"numero": 2, "data_vencimento": "2024-08-10", "valor": 100.0},
+                ],
+                "valor_total": 200.0,
+                "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+            },
+            provider="mock",
+        ),
+    )
+    def test_multiple_installments_must_have_distinct_due_dates(self, _mock_extract) -> None:
+        service = InvoiceExtractionService()
+        file = SimpleUploadedFile("nota_parcelas.pdf", b"%PDF-1.4 mock", content_type="application/pdf")
+
+        with self.assertRaisesMessage(ValueError, "Cada parcela deve possuir data de vencimento distinta."):
+            service.extract(file)

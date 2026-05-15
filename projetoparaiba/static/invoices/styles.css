@@ -612,6 +612,80 @@ svg {
   cursor: not-allowed;
 }
 
+.history-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-copy {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.5;
+}
+
+.history-toggle-button {
+  min-height: 46px;
+  width: fit-content;
+  padding: 0 16px;
+  border: 1px solid rgba(149, 177, 214, 0.22);
+  border-radius: 14px;
+  background: rgba(16, 26, 44, 0.96);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.history-toggle-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(242, 184, 75, 0.4);
+  background: rgba(22, 37, 61, 0.98);
+}
+
+.history-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.history-entry {
+  border: 1px solid rgba(149, 177, 214, 0.12);
+  border-radius: 18px;
+  background: rgba(5, 10, 18, 0.8);
+  overflow: hidden;
+}
+
+.history-entry summary {
+  padding: 16px 18px;
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--text);
+  list-style: none;
+}
+
+.history-entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-entry-body {
+  padding: 0 18px 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.history-json {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba(149, 177, 214, 0.12);
+  border-radius: 16px;
+  background: #02060d;
+  color: #d0ffe2;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .json-block {
   max-height: 560px;
   margin: 0;
@@ -705,7 +779,8 @@ svg {
 
   .upload-button,
   .extract-button,
-  .copy-button {
+  .copy-button,
+  .history-toggle-button {
     width: 100%;
     justify-content: center;
   }

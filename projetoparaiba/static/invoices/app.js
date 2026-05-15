@@ -130,7 +130,7 @@ form.addEventListener("submit", async (event) => {
     resultPanel.hidden = false;
     showTab("formatted");
     copyButton.disabled = false;
-    showToast(payload.provider ? `Dados extraidos via ${payload.provider}.` : "Dados extraidos.");
+    showToast(payload.message || (payload.provider ? `Dados extraidos via ${payload.provider}.` : "Dados extraidos."));
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -145,6 +145,22 @@ form.addEventListener("submit", async (event) => {
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => showTab(tab.dataset.tab));
+});
+
+formattedView.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-history-toggle]");
+  if (!toggle) {
+    return;
+  }
+
+  const panel = formattedView.querySelector("[data-history-panel]");
+  if (!panel) {
+    return;
+  }
+
+  const shouldShow = panel.hidden;
+  panel.hidden = !shouldShow;
+  toggle.textContent = shouldShow ? "Ocultar dados ja salvos" : `Mostrar dados ja salvos (${toggle.dataset.historyCount || 0})`;
 });
 
 copyButton.addEventListener("click", async () => {
@@ -190,6 +206,7 @@ function renderFormatted(data, analysis = {}, successMessage = "") {
 
   formattedView.innerHTML = [
     launchMessageCard(successMessage, analysis.movimento),
+    supplierHistoryCard(analysis.historico_fornecedor),
     analysisCard(analysis.fornecedor),
     analysisCard(analysis.faturado),
     analysisCard(analysis.despesa),
@@ -272,6 +289,51 @@ function launchMessageCard(message, movimento) {
     ["Mensagem", message],
     ["Movimento", movimento?.status_texto],
   ]), "classification");
+}
+
+function supplierHistoryCard(history) {
+  if (!history || !Array.isArray(history.itens) || !history.itens.length) {
+    return "";
+  }
+
+  const count = Number(history.quantidade || history.itens.length);
+  const items = history.itens.map((item) => `
+    <details class="history-entry">
+      <summary>
+        Nota ${escapeHtml(item.numero_nota_fiscal || "-")} • Movimento ${escapeHtml(item.movimento_id || "-")} • ${escapeHtml(currency(item.valor_total))}
+      </summary>
+      <div class="history-entry-body">
+        <dl class="data-grid">
+          ${dataRow("Numero da Nota", item.numero_nota_fiscal || "-")}
+          ${dataRow("Serie", item.serie || "-")}
+          ${dataRow("Data de Emissao", item.data_emissao || "-")}
+          ${dataRow("Faturado", item.faturado || "-")}
+          ${dataRow("Classificacao", item.classificacao || "-")}
+          ${dataRow("Arquivo", item.arquivo || "-")}
+          ${dataRow("Origem", item.provider || "-")}
+          ${dataRow("Criado em", item.criado_em || "-")}
+        </dl>
+        <pre class="history-json">${escapeHtml(JSON.stringify(item.dados_extraidos || {}, null, 2))}</pre>
+      </div>
+    </details>
+  `).join("");
+
+  return `
+    <article class="data-card classification">
+      <div class="data-card-header">
+        <h3>${escapeHtml(history.titulo || "Historico do fornecedor")}</h3>
+      </div>
+      <div class="data-card-body history-card-body">
+        <p class="history-copy">Encontramos ${escapeHtml(count)} registro(s) anterior(es) desse fornecedor no banco.</p>
+        <button class="history-toggle-button" type="button" data-history-toggle data-history-count="${escapeHtml(count)}">
+          Mostrar dados ja salvos (${escapeHtml(count)})
+        </button>
+        <div class="history-panel" data-history-panel hidden>
+          ${items}
+        </div>
+      </div>
+    </article>
+  `;
 }
 
 function productsCard(produtos) {
