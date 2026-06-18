@@ -123,7 +123,11 @@ def api_pessoas(request):
         tipo = request.GET.get("tipo", "")
         q = request.GET.get("q", "").strip()
         qs = Pessoa.objects.all()
-        if tipo:
+        if tipo == Pessoa.Tipo.FORNECEDOR:
+            qs = qs.filter(tipo__in=[Pessoa.Tipo.FORNECEDOR, Pessoa.Tipo.CLIENTE_FORNECEDOR])
+        elif tipo == Pessoa.Tipo.FATURADO:
+            qs = qs.filter(tipo__in=[Pessoa.Tipo.FATURADO, Pessoa.Tipo.CLIENTE, Pessoa.Tipo.CLIENTE_FORNECEDOR])
+        elif tipo:
             qs = qs.filter(tipo=tipo)
         if q:
             qs = qs.filter(
