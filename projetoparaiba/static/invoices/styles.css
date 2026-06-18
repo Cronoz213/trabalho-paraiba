@@ -961,3 +961,77 @@ svg {
     border-radius: 18px;
   }
 }
+
+/* ── Sidenav (adicionado na 4a etapa) ─────────────────────────────────────── */
+body { display: flex; }
+
+.sidenav {
+  width: 210px;
+  min-height: 100vh;
+  background: #111827;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.sidenav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidenav-mark {
+  width: 32px; height: 32px;
+  background: #2563eb;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+.sidenav-group { margin-top: 4px; }
+
+.sidenav-group-title {
+  display: block;
+  padding: 10px 16px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #4b5563;
+}
+
+.sidenav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 13px;
+  transition: background .15s, color .15s;
+}
+
+.sidenav-item svg {
+  width: 14px; height: 14px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.sidenav-item:hover { background: #1f2937; color: #e5e7eb; }
+.sidenav-item.active { color: #60a5fa; background: rgba(37,99,235,.15); }
+
+.page-with-nav {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}

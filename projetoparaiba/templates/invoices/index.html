@@ -8,6 +8,35 @@
     <link rel="stylesheet" href="{% static 'invoices/styles.css' %}">
   </head>
   <body>
+    <nav class="sidenav">
+      <div class="sidenav-brand">
+        <span class="sidenav-mark">AF</span>
+        <span>Adm-Financeiro</span>
+      </div>
+      <a href="/" class="sidenav-item active">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Extração de NF
+      </a>
+      <div class="sidenav-group">
+        <span class="sidenav-group-title">Financeiro</span>
+        <a href="/contas/" class="sidenav-item">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Contas
+        </a>
+      </div>
+      <div class="sidenav-group">
+        <span class="sidenav-group-title">Pessoas</span>
+        <a href="/pessoas/fornecedor/" class="sidenav-item">Fornecedor</a>
+        <a href="/pessoas/cliente/" class="sidenav-item">Cliente</a>
+        <a href="/pessoas/faturado/" class="sidenav-item">Faturado</a>
+      </div>
+      <div class="sidenav-group">
+        <span class="sidenav-group-title">Classificação</span>
+        <a href="/classificacao/receita/" class="sidenav-item">Receita</a>
+        <a href="/classificacao/despesa/" class="sidenav-item">Despesa</a>
+      </div>
+    </nav>
+    <div class="page-with-nav">
     <header class="topbar">
       <div class="topbar-inner">
         <a class="brand" href="/">
@@ -188,5 +217,6 @@
     </main>
 
     <script src="{% static 'invoices/app.js' %}"></script>
+    </div>{# /page-with-nav #}
   </body>
 </html>

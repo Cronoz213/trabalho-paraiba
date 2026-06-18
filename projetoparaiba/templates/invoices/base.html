@@ -1,0 +1,111 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Administrativo-Financeiro{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'invoices/crud.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="/" class="brand-link">
+        <span class="brand-mark">AF</span>
+        <div>
+          <div class="brand-name">Adm-Financeiro</div>
+          <div class="brand-sub">Projeto Paraíba</div>
+        </div>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item {% if active_page == 'upload' %}active{% endif %}">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Extração de NF
+      </a>
+
+      <div class="nav-group">
+        <span class="nav-group-title">Financeiro</span>
+        <a href="/contas/" class="nav-item {% if active_page == 'contas' %}active{% endif %}">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Contas
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-title">Pessoas</span>
+        <a href="/pessoas/fornecedor/" class="nav-item {% if tipo == 'FORNECEDOR' %}active{% endif %}">
+          Fornecedor
+        </a>
+        <a href="/pessoas/cliente/" class="nav-item {% if tipo == 'CLIENTE' %}active{% endif %}">
+          Cliente
+        </a>
+        <a href="/pessoas/faturado/" class="nav-item {% if tipo == 'FATURADO' %}active{% endif %}">
+          Faturado
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-title">Classificação</span>
+        <a href="/classificacao/receita/" class="nav-item {% if tipo == 'RECEITA' %}active{% endif %}">
+          Receita
+        </a>
+        <a href="/classificacao/despesa/" class="nav-item {% if tipo == 'DESPESA' %}active{% endif %}">
+          Despesa
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────────────── -->
+  <main class="main-content">
+    <div class="page-inner">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast toast-success" role="status" aria-live="polite" hidden></div>
+
+<script>
+  function getCsrf() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  async function apiFetch(url, opts = {}) {
+    return fetch(url, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        ...(opts.headers || {}),
+      },
+    });
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast toast-' + type;
+    t.hidden = false;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.hidden = true; }, 3500);
+  }
+
+  function formatErrors(err) {
+    if (!err) return 'Erro desconhecido.';
+    if (typeof err === 'string') return err;
+    return Object.entries(err).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n');
+  }
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
