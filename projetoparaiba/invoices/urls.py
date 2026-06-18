@@ -5,6 +5,10 @@ from . import views
 app_name = "invoices"
 
 urlpatterns = [
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    path("login/", views.CustomLoginView.as_view(), name="login"),
+    path("logout/", views.logout_view, name="logout"),
+
     # ── Existing ──────────────────────────────────────────────────────────────
     path("", views.index, name="index"),
     path("api/invoices/extract/", views.extract_invoice, name="extract_invoice"),

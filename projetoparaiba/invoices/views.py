@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST, require_http_methods
 
@@ -16,12 +19,26 @@ from .rag import DatabaseRagService
 from .services import InvoiceExtractionService
 
 
+# ── Auth views ────────────────────────────────────────────────────────────────
+
+class CustomLoginView(LoginView):
+    template_name = "invoices/login.html"
+    redirect_authenticated_user = True
+
+
+def logout_view(request):
+    logout(request)
+    return redirect("invoices:login")
+
+
 # ── Existing views ────────────────────────────────────────────────────────────
 
+@login_required
 def index(request):
     return render(request, "invoices/index.html")
 
 
+@login_required
 @require_POST
 def extract_invoice(request):
     uploaded_file = request.FILES.get("pdf")
@@ -51,6 +68,7 @@ def extract_invoice(request):
         return JsonResponse({"error": "Erro interno ao processar o PDF.", "detail": str(exc)}, status=500)
 
 
+@login_required
 @require_POST
 def query_database_rag(request):
     try:
@@ -73,6 +91,7 @@ def query_database_rag(request):
 
 # ── Page views ────────────────────────────────────────────────────────────────
 
+@login_required
 @ensure_csrf_cookie
 def pessoas_page(request, tipo):
     labels = {
@@ -88,6 +107,7 @@ def pessoas_page(request, tipo):
     })
 
 
+@login_required
 @ensure_csrf_cookie
 def classificacao_page(request, tipo):
     labels = {
@@ -102,6 +122,7 @@ def classificacao_page(request, tipo):
     })
 
 
+@login_required
 @ensure_csrf_cookie
 def contas_page(request):
     return render(request, "invoices/contas.html", {"active_page": "contas"})
@@ -117,6 +138,7 @@ def _validation_error_response(exc):
 
 # ── Pessoas API ───────────────────────────────────────────────────────────────
 
+@login_required
 @require_http_methods(["GET", "POST"])
 def api_pessoas(request):
     if request.method == "GET":
@@ -125,6 +147,8 @@ def api_pessoas(request):
         qs = Pessoa.objects.all()
         if tipo == Pessoa.Tipo.FORNECEDOR:
             qs = qs.filter(tipo__in=[Pessoa.Tipo.FORNECEDOR, Pessoa.Tipo.CLIENTE_FORNECEDOR])
+        elif tipo == Pessoa.Tipo.CLIENTE:
+            qs = qs.filter(tipo__in=[Pessoa.Tipo.CLIENTE, Pessoa.Tipo.CLIENTE_FORNECEDOR])
         elif tipo == Pessoa.Tipo.FATURADO:
             qs = qs.filter(tipo__in=[Pessoa.Tipo.FATURADO, Pessoa.Tipo.CLIENTE, Pessoa.Tipo.CLIENTE_FORNECEDOR])
         elif tipo:
@@ -149,6 +173,7 @@ def api_pessoas(request):
         return JsonResponse({"error": str(exc)}, status=400)
 
 
+@login_required
 @require_http_methods(["GET", "PUT", "DELETE"])
 def api_pessoa(request, pk):
     try:
@@ -184,6 +209,7 @@ def api_pessoa(request, pk):
 
 # ── Classificacao API ─────────────────────────────────────────────────────────
 
+@login_required
 @require_http_methods(["GET", "POST"])
 def api_classificacoes(request):
     if request.method == "GET":
@@ -210,6 +236,7 @@ def api_classificacoes(request):
         return JsonResponse({"error": str(exc)}, status=400)
 
 
+@login_required
 @require_http_methods(["GET", "PUT", "DELETE"])
 def api_classificacao_item(request, pk):
     try:
@@ -240,6 +267,7 @@ def api_classificacao_item(request, pk):
 
 # ── MovimentoContas API ───────────────────────────────────────────────────────
 
+@login_required
 @require_http_methods(["GET", "POST"])
 def api_contas(request):
     if request.method == "GET":
@@ -280,6 +308,7 @@ def api_contas(request):
         return JsonResponse({"error": str(exc)}, status=400)
 
 
+@login_required
 @require_http_methods(["GET", "PUT", "DELETE"])
 def api_conta(request, pk):
     try:
@@ -317,6 +346,7 @@ def api_conta(request, pk):
 
 # ── Options API (selects para formulários) ────────────────────────────────────
 
+@login_required
 def api_options(request):
     fornecedores = list(
         Pessoa.objects.filter(tipo__in=[Pessoa.Tipo.FORNECEDOR, Pessoa.Tipo.CLIENTE_FORNECEDOR])

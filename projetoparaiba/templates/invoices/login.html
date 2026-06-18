@@ -1,0 +1,114 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar – Adm-Financeiro</title>
+  <link rel="stylesheet" href="{% static 'invoices/crud.css' %}">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 380px;
+      padding: 40px 36px 36px;
+    }
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .login-mark {
+      width: 42px;
+      height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .login-brand-name { font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .login-brand-sub  { font-size: 12px; color: var(--muted); }
+    .login-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .login-sub   { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    .form-group  { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+    .form-group input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color .15s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .btn-login {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background .15s;
+    }
+    .btn-login:hover { background: var(--accent-hover); }
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius);
+      color: #dc2626;
+      font-size: 13px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-mark">AF</div>
+      <div>
+        <div class="login-brand-name">Adm-Financeiro</div>
+        <div class="login-brand-sub">Projeto Paraíba</div>
+      </div>
+    </div>
+
+    <p class="login-title">Entrar no sistema</p>
+    <p class="login-sub">Informe suas credenciais para continuar.</p>
+
+    {% if form.non_field_errors %}
+      <div class="error-box">{{ form.non_field_errors|join:", " }}</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_username">Usuário</label>
+        <input type="text" id="id_username" name="username" autocomplete="username" autofocus required
+               value="{{ form.username.value|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label for="id_password">Senha</label>
+        <input type="password" id="id_password" name="password" autocomplete="current-password" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn-login">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>
