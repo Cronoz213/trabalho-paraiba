@@ -7,4 +7,5 @@ app_name = "invoices"
 urlpatterns = [
     path("", views.index, name="index"),
     path("api/invoices/extract/", views.extract_invoice, name="extract_invoice"),
+    path("api/rag/query/", views.query_database_rag, name="query_database_rag"),
 ]

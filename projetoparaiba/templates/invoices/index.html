@@ -78,6 +78,80 @@
         </section>
       </div>
 
+      <section class="rag-section" aria-labelledby="rag-title">
+        <div class="rag-copy">
+          <span class="hero-eyebrow">Consulta com agente inteligente</span>
+          <h2 id="rag-title">Faça perguntas simples sobre os dados salvos</h2>
+          <p>
+            Voce pode perguntar sobre fornecedor, cliente, nota fiscal, classificacao, parcelas e movimentos.
+            Escreva como falaria normalmente, por exemplo: quem, qual, quanto, quando ou quais.
+          </p>
+        </div>
+
+        <form id="rag-form" class="rag-form">
+          <label class="rag-field">
+            <span>Pergunta</span>
+            <textarea
+              id="rag-question"
+              name="question"
+              rows="4"
+              placeholder="Ex.: Qual fornecedor aparece mais vezes no banco?"
+            ></textarea>
+          </label>
+
+          <div class="rag-help">
+            <p class="rag-help-title">Exemplos prontos</p>
+            <div class="rag-example-list">
+              <button class="rag-example" type="button" data-question="Qual fornecedor aparece mais vezes no banco?">Qual fornecedor aparece mais vezes no banco?</button>
+              <button class="rag-example" type="button" data-question="Quais notas fiscais ja foram lancadas para a EMPRESA FORNECEDORA LTDA?">Quais notas fiscais ja foram lancadas para a EMPRESA FORNECEDORA LTDA?</button>
+              <button class="rag-example" type="button" data-question="Qual foi o valor total do movimento NF-101?">Qual foi o valor total do movimento NF-101?</button>
+              <button class="rag-example" type="button" data-question="Quais parcelas estao salvas e como sera o pagamento?">Quais parcelas estao salvas e como sera o pagamento?</button>
+              <button class="rag-example" type="button" data-question="Quais fornecedores estao cadastrados no banco?">Quais fornecedores estao cadastrados no banco?</button>
+              <button class="rag-example" type="button" data-question="Quais clientes ou faturados aparecem nos lancamentos?">Quais clientes ou faturados aparecem nos lancamentos?</button>
+              <button class="rag-example" type="button" data-question="Qual classificacao de despesa foi usada nos movimentos salvos?">Qual classificacao de despesa foi usada nos movimentos salvos?</button>
+              <button class="rag-example" type="button" data-question="Mostre os movimentos com numero de nota fiscal salvo no banco.">Mostre os movimentos com numero de nota fiscal salvo no banco.</button>
+              <button class="rag-example" type="button" data-question="Quais notas fiscais possuem parcelas cadastradas?">Quais notas fiscais possuem parcelas cadastradas?</button>
+              <button class="rag-example" type="button" data-question="Qual forma de pagamento aparece nas parcelas registradas?">Qual forma de pagamento aparece nas parcelas registradas?</button>
+              <button class="rag-example" type="button" data-question="Existe historico de lancamentos para algum fornecedor?">Existe historico de lancamentos para algum fornecedor?</button>
+              <button class="rag-example" type="button" data-question="Quais arquivos PDF ja foram processados pelo sistema?">Quais arquivos PDF ja foram processados pelo sistema?</button>
+              <button class="rag-example" type="button" data-question="Qual foi a ultima extracao salva no banco?">Qual foi a ultima extracao salva no banco?</button>
+              <button class="rag-example" type="button" data-question="Qual e o valor total das notas que ja foram registradas?">Qual e o valor total das notas que ja foram registradas?</button>
+              <button class="rag-example" type="button" data-question="Quais registros estao relacionados ao fornecedor EMPRESA FORNECEDORA LTDA?">Quais registros estao relacionados ao fornecedor EMPRESA FORNECEDORA LTDA?</button>
+              <button class="rag-example" type="button" data-question="Explique os dados salvos do movimento mais recente.">Explique os dados salvos do movimento mais recente.</button>
+            </div>
+          </div>
+
+          <div class="rag-actions">
+            <label class="rag-field rag-field-inline">
+              <span>Modo de busca</span>
+              <select id="rag-mode" name="mode">
+                <option value="simple">RAG Simples</option>
+                <option value="embeddings">RAG Embeddings</option>
+              </select>
+            </label>
+
+            <button id="rag-submit" class="extract-button" type="submit">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 12h16"></path>
+                <path d="m14 6 6 6-6 6"></path>
+              </svg>
+              <span>Consultar Banco</span>
+            </button>
+          </div>
+        </form>
+
+        <div id="rag-result" class="rag-result" hidden>
+          <div class="results-heading">
+            <h3>Resposta RAG</h3>
+            <p id="rag-provider" class="provider-badge" hidden></p>
+          </div>
+          <div class="rag-answer-shell">
+            <p id="rag-answer" class="rag-answer"></p>
+          </div>
+          <div id="rag-context" class="rag-context"></div>
+        </div>
+      </section>
+
       <section id="result-panel" class="results" hidden aria-labelledby="result-title">
         <div class="results-heading">
           <h2 id="result-title">Dados Extraídos</h2>

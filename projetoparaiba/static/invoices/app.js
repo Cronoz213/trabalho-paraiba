@@ -1,4 +1,5 @@
 const form = document.querySelector("#upload-form");
+const ragForm = document.querySelector("#rag-form");
 const dropzone = document.querySelector("#dropzone");
 const fileInput = document.querySelector("#pdf-input");
 const selectedFile = document.querySelector("#selected-file");
@@ -12,6 +13,14 @@ const jsonView = document.querySelector("#json-view");
 const jsonOutput = document.querySelector("#json-output");
 const copyButton = document.querySelector("#copy-button");
 const toast = document.querySelector("#toast");
+const ragQuestion = document.querySelector("#rag-question");
+const ragMode = document.querySelector("#rag-mode");
+const ragSubmit = document.querySelector("#rag-submit");
+const ragResult = document.querySelector("#rag-result");
+const ragProvider = document.querySelector("#rag-provider");
+const ragAnswer = document.querySelector("#rag-answer");
+const ragContext = document.querySelector("#rag-context");
+const ragExamples = document.querySelectorAll(".rag-example");
 
 let latestJson = null;
 
@@ -143,6 +152,51 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+ragForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const question = ragQuestion.value.trim();
+  if (!question) {
+    showToast("Digite uma pergunta para consultar o banco.");
+    ragQuestion.focus();
+    return;
+  }
+
+  setRagLoading(true);
+
+  try {
+    const response = await fetch("/api/rag/query/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCsrfToken(),
+      },
+      body: JSON.stringify({
+        question,
+        mode: ragMode.value,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.detail || payload.error || "Falha ao consultar o banco.");
+    }
+
+    renderRagResult(payload);
+    showToast(`Consulta ${payload.mode} concluida.`);
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    setRagLoading(false);
+  }
+});
+
+ragExamples.forEach((button) => {
+  button.addEventListener("click", () => {
+    ragQuestion.value = button.dataset.question || "";
+    ragQuestion.focus();
+  });
+});
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => showTab(tab.dataset.tab));
 });
@@ -194,6 +248,55 @@ function renderProvider(provider, fallbackReason = "") {
 
   providerBadge.textContent = fallbackReason ? `Origem: ${provider || "mock"} - ${fallbackReason}` : `Origem: ${provider}`;
   providerBadge.hidden = false;
+}
+
+function renderRagResult(payload) {
+  ragAnswer.textContent = payload.answer || "Nenhuma resposta gerada.";
+  ragProvider.textContent = `Origem: ${payload.provider} - modo ${payload.mode}`;
+  ragProvider.hidden = false;
+  ragContext.innerHTML = renderRagContext(payload.context || [], payload.stats || {});
+  ragResult.hidden = false;
+}
+
+function renderRagContext(context, stats) {
+  const cards = context.length
+    ? context.map((item) => `
+      <article class="data-card invoice">
+        <div class="data-card-header">
+          <h3>${escapeHtml(item.title || `${item.kind} ${item.id}`)}</h3>
+        </div>
+        <div class="data-card-body">
+          <dl class="data-grid">
+            ${dataRow("Tipo", item.kind)}
+            ${dataRow("ID", item.id)}
+            ${dataRow("Score", item.score)}
+            ${dataRow("Trecho recuperado", item.text)}
+          </dl>
+        </div>
+      </article>
+    `).join("")
+    : `
+      <article class="data-card invoice">
+        <div class="data-card-header"><h3>Contexto recuperado</h3></div>
+        <div class="data-card-body">
+          <p class="history-copy">Nenhum registro relevante foi recuperado nesta consulta.</p>
+        </div>
+      </article>
+    `;
+
+  return `
+    <div class="rag-stats">
+      <strong>Base indexada:</strong> ${escapeHtml(stats.total_registros_indexados ?? 0)} registros
+    </div>
+    <div class="formatted-view">
+      ${cards}
+    </div>
+  `;
+}
+
+function setRagLoading(isLoading) {
+  ragSubmit.disabled = isLoading;
+  ragSubmit.querySelector("span").textContent = isLoading ? "Consultando..." : "Consultar Banco";
 }
 
 function renderFormatted(data, analysis = {}, successMessage = "") {

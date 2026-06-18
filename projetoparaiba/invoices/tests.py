@@ -955,3 +955,97 @@ class ParcelValidationTests(TestCase):
 
         with self.assertRaisesMessage(ValueError, "Cada parcela deve possuir data de vencimento distinta."):
             service.extract(file)
+
+
+@override_settings(GEMINI_API_KEY="")
+class DatabaseRagApiTests(TestCase):
+    def setUp(self) -> None:
+        self.fornecedor = Pessoa.objects.create(
+            tipo=Pessoa.Tipo.CLIENTE_FORNECEDOR,
+            razao_social="EMPRESA FORNECEDORA LTDA",
+            documento="12345678000190",
+            cidade="Campina Grande",
+            uf="PB",
+        )
+        self.faturado = Pessoa.objects.create(
+            tipo=Pessoa.Tipo.FATURADO,
+            razao_social="CLIENTE EXEMPLO",
+            documento="12345678900",
+            cidade="Joao Pessoa",
+            uf="PB",
+        )
+        self.classificacao = Classificacao.objects.create(
+            tipo=Classificacao.Tipo.DESPESA,
+            descricao="MANUTENCAO E OPERACAO",
+        )
+        self.extraction = InvoiceExtraction.objects.create(
+            file_name="nota_teste.pdf",
+            file_size=1234,
+            provider="mock",
+            status=InvoiceExtraction.Status.SUCCESS,
+            result_json={
+                "fornecedor": {"razao_social": "EMPRESA FORNECEDORA LTDA"},
+                "numero_nota_fiscal": "NF-101",
+                "valor_total": 1500.0,
+            },
+        )
+        self.movimento = MovimentoContas.objects.create(
+            tipo=MovimentoContas.Tipo.APAGAR,
+            fornecedor=self.fornecedor,
+            faturado=self.faturado,
+            classificacao=self.classificacao,
+            invoice_extraction=self.extraction,
+            numero_nota_fiscal="NF-101",
+            serie="1",
+            data_emissao="2024-01-15",
+            valor_total=1500.0,
+            observacao="Teste de movimento",
+        )
+        self.movimento.classificacoes.add(self.classificacao)
+        ParcelaContas.objects.create(
+            movimento=self.movimento,
+            identificacao="APAGAR-NF-101-1",
+            numero_parcela=1,
+            data_vencimento="2024-02-15",
+            valor=1500.0,
+            forma_pagamento="Boleto",
+        )
+
+    def test_rag_simple_query_returns_context_from_database(self) -> None:
+        response = self.client.post(
+            reverse("invoices:query_database_rag"),
+            data='{"question":"Quais movimentos existem para EMPRESA FORNECEDORA LTDA?","mode":"simple"}',
+            content_type="application/json",
+        )
+        payload = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["mode"], "simple")
+        self.assertTrue(payload["context"])
+        self.assertIn("EMPRESA FORNECEDORA LTDA", payload["answer"])
+        self.assertEqual(payload["provider"], "mock")
+
+    def test_rag_embeddings_query_returns_ranked_chunks(self) -> None:
+        response = self.client.post(
+            reverse("invoices:query_database_rag"),
+            data='{"question":"Mostre a parcela do movimento NF-101 e a forma de pagamento","mode":"embeddings"}',
+            content_type="application/json",
+        )
+        payload = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["mode"], "embeddings")
+        self.assertGreaterEqual(len(payload["context"]), 1)
+        self.assertIn(payload["context"][0]["kind"], {"movimento", "parcela", "extracao"})
+
+    def test_rag_requires_question(self) -> None:
+        response = self.client.post(
+            reverse("invoices:query_database_rag"),
+            data='{"question":"   ","mode":"simple"}',
+            content_type="application/json",
+        )
+        payload = response.json()
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(payload["error"], "Falha na consulta RAG.")

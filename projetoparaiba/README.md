@@ -1,6 +1,10 @@
 # Projeto Administrativo-Financeiro N2
 
 Aplicacao web em Django para upload de PDF de nota fiscal, extracao dos dados com Gemini ou mock local, classificacao automatica de despesa e exibicao do JSON na tela.
+Agora o projeto tambem possui uma area de consulta ao banco com RAG, permitindo perguntas em linguagem natural com dois modos de recuperacao:
+
+- RAG SIMPLES
+- RAG EMBEDDINGS
 
 ## Arquitetura com Agents
 
@@ -78,6 +82,9 @@ Regras:
 3. Clique em `Extrair Dados`.
 4. Veja o resultado em `Visualizacao Formatada` ou `JSON Bruto`.
 5. Use `Copiar JSON` se quiser reaproveitar a saida.
+6. Na secao `Pergunte ao banco com RAG simples ou RAG embeddings`, digite uma pergunta sobre os dados salvos.
+7. Escolha o modo `RAG Simples` ou `RAG Embeddings`.
+8. Clique em `Consultar Banco` para receber uma resposta elaborada com base nos registros recuperados.
 
 ## Como usar pela API
 
@@ -85,11 +92,23 @@ Endpoint:
 
 `POST /api/invoices/extract/`
 
+Endpoint RAG:
+
+`POST /api/rag/query/`
+
 Exemplo com `curl`:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/invoices/extract/ \
   -F "pdf=@caminho/para/nota.pdf"
+```
+
+Exemplo de consulta RAG:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/rag/query/ \
+  -H "Content-Type: application/json" \
+  -d "{\"question\":\"Quais movimentos existem para a EMPRESA FORNECEDORA LTDA?\",\"mode\":\"simple\"}"
 ```
 
 Exemplo de fallback:
