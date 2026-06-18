@@ -55,12 +55,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 def database_config() -> dict:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
-        if DEBUG:
-            return {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
-            }
-        raise ValueError("DATABASE_URL não definido. Configure o PostgreSQL em ambiente nao-desenvolvimento.")
+        return {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
 
     parsed = urlparse(database_url)
     if parsed.scheme not in {"postgres", "postgresql"}:
@@ -84,6 +82,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
